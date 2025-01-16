@@ -21,19 +21,26 @@
         </div>
     </div>
 
-    <script>
-        function init() {
-            const path = window.location.pathname;
-            const shortCode = path.substring(1); // Убираем начальный слеш
-            
-            const data = JSON.parse(localStorage.getItem(shortCode));
-            if (!data) {
-                document.getElementById('content').innerHTML = '<h2>Ошибка</h2><p>Ссылка недействительна или устарела</p>';
-                return;
-            }
+    <script type="module">
+        import { getKeyData } from './path-to-supabase-client.js';
 
-            document.getElementById('instructions').textContent = data.instructions;
-            document.getElementById('key').textContent = data.key;
+        async function init() {
+            const path = window.location.pathname;
+            const shortId = path.substring(1); // Убираем начальный слеш
+
+            try {
+                const keyData = await getKeyData(shortId);
+                if (!keyData) {
+                    document.getElementById('content').innerHTML = '<h2>Ошибка</h2><p>Ссылка недействительна или устарела</p>';
+                    return;
+                }
+
+                document.getElementById('instructions').textContent = keyData.instructions;
+                document.getElementById('key').textContent = keyData.key;
+            } catch (error) {
+                console.error('Error fetching key data:', error);
+                document.getElementById('content').innerHTML = '<h2>Ошибка</h2><p>Не удалось загрузить данные. Попробуйте позже.</p>';
+            }
         }
 
         init();
