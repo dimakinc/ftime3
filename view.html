@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Инструкция по активации</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f0f2f5;
+            color: #1a1a1a;
+        }
+        .container {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            margin-top: 40px;
+        }
+        .key-container {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px dashed #ddd;
+        }
+        .key {
+            font-family: monospace;
+            font-size: 1.2em;
+            word-break: break-all;
+            color: #2c3e50;
+        }
+        .instructions {
+            white-space: pre-line;
+            line-height: 1.6;
+        }
+        .error {
+            color: #dc3545;
+            text-align: center;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="content">
+            <h2>Инструкция по активации</h2>
+            <div id="instructions" class="instructions"></div>
+            
+            <div class="key-container">
+                <h3>Ваш ключ:</h3>
+                <div id="key" class="key"></div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+        const supabase = createClient(
+            'https://icyemhiqhwcjwjztkwpu.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImljeWVtaGlxaHdjandqenRrd3B1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzY4OTMyMDIsImV4cCI6MjA1MjQ2OTIwMn0.emyxIB9HgyYqXxYunktkZqBqAwUe-BFsV9orIvFmEYE'
+        )
+
+        async function init() {
+            try {
+                const shortId = window.location.pathname.substring(1);
+                if (!shortId) {
+                    throw new Error('Ключ не найден');
+                }
+
+                const { data, error } = await supabase
+                    .from('keys')
+                    .select('key_value, instructions')
+                    .eq('short_id', shortId)
+                    .single();
+
+                if (error) throw error;
+                if (!data) throw new Error('Ключ не найден');
+                
+                document.getElementById('instructions').textContent = data.instructions;
+                document.getElementById('key').textContent = data.key_value;
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('content').innerHTML = '<h2>Ошибка</h2><p>Ссылка недействительна или устарела</p>';
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>

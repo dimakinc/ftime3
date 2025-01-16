@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Конвертер ключей</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f0f2f5;
+            color: #1a1a1a;
+        }
+        .app-title {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+        }
+        .container {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            margin-bottom: 25px;
+        }
+        .step-title {
+            color: #2c3e50;
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+        textarea {
+            width: 100%;
+            margin: 10px 0;
+            min-height: 120px;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-family: 'Roboto', sans-serif;
+            font-size: 14px;
+            resize: vertical;
+            box-sizing: border-box;
+        }
+        textarea:focus {
+            outline: none;
+            border-color: #4CAF50;
+            box-shadow: 0 0 2px rgba(76, 175, 80, 0.2);
+        }
+        .button-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        button:hover {
+            background: #45a049;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        button:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+        }
+        #result {
+            background: #f8f9fa;
+        }
+        .copy-hint {
+            text-align: center;
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+        .error {
+            color: #dc3545;
+            margin-top: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1 class="app-title">Конвертер ключей</h1>
+    
+    <div class="container">
+        <h3 class="step-title">1. Введите инструкцию</h3>
+        <textarea id="instructions" placeholder="Введите инструкцию по активации">1. Перейдите на сайт example.com
+2. Нажмите кнопку Активировать
+3. Введите ваш ключ</textarea>
+    </div>
+
+    <div class="container">
+        <h3 class="step-title">2. Вставьте ключи</h3>
+        <textarea id="keys" placeholder="Вставьте ключи, каждый с новой строки"></textarea>
+    </div>
+
+    <div class="button-container">
+        <button id="convertButton">Сконвертировать</button>
+        <div id="error" class="error"></div>
+    </div>
+
+    <div class="container">
+        <h3 class="step-title">Готовые ссылки</h3>
+        <textarea id="result" readonly></textarea>
+        <div class="copy-hint">Нажмите Ctrl+C чтобы скопировать все ссылки</div>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+        const supabase = createClient(
+            import.meta.env.VITE_SUPABASE_URL,
+            import.meta.env.VITE_SUPABASE_ANON_KEY
+        )
+
+        function generateShortId() {
+            const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let result = '';
+            for (let i = 0; i < 4; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
+        }
+
+        function showError(message) {
+            const errorElement = document.getElementById('error');
+            errorElement.textContent = message;
+        }
+
+        function clearError() {
+            const errorElement = document.getElementById('error');
+            errorElement.textContent = '';
+        }
+
+        async function convertKeys() {
+            const instructions = document.getElementById('instructions').value;
+            const keys = document.getElementById('keys').value
+                .split('\n')
+                .filter(key => key.trim());
+            
+            if (keys.length === 0) {
+                showError('Пожалуйста, введите хотя бы один ключ');
+                return;
+            }
+
+            const button = document.getElementById('convertButton');
+            button.disabled = true;
+            clearError();
+
+            try {
+                const results = [];
+                
+                for (const key_value of keys) {
+                    const short_id = generateShortId();
+                    
+                    const { data, error } = await supabase
+                        .from('keys')
+                        .insert([{
+                            short_id,
+                            key_value,
+                            instructions
+                        }])
+                        .select('short_id')
+                        .single();
+
+                    if (error) {
+                        console.error('Error:', error);
+                        throw error;
+                    }
+                    
+                    results.push(short_id);
+                }
+
+                const links = results.map(id => `${window.location.origin}/${id}`);
+                document.getElementById('result').value = links.join('\n');
+            } catch (error) {
+                console.error('Error:', error);
+                showError('Произошла ошибка при создании ссылок');
+            } finally {
+                button.disabled = false;
+            }
+        }
+
+        // Add event listener
+        document.getElementById('convertButton').addEventListener('click', convertKeys);
+    </script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Инструкция по активации</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        /* ... предыдущие стили ... */
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="content">
+            <h2>Инструкция по активации</h2>
+            <div id="instructions" class="instructions"></div>
+            
+            <div class="key-container">
+                <h3>Ваш ключ:</h3>
+                <div id="key" class="key"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function init() {
+            const path = window.location.pathname;
+            const shortCode = path.substring(1); // Убираем начальный слеш
+            
+            const data = JSON.parse(localStorage.getItem(shortCode));
+            if (!data) {
+                document.getElementById('content').innerHTML = '<h2>Ошибка</h2><p>Ссылка недействительна или устарела</p>';
+                return;
+            }
+
+            document.getElementById('instructions').textContent = data.instructions;
+            document.getElementById('key').textContent = data.key;
+        }
+
+        init();
+    </script>
+</body>
+</html>
