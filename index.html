@@ -116,21 +116,7 @@
     </div>
 
     <script type="module">
-        import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-        const supabase = createClient(
-            import.meta.env.VITE_SUPABASE_URL,
-            import.meta.env.VITE_SUPABASE_ANON_KEY
-        )
-
-        function generateShortId() {
-            const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-            let result = '';
-            for (let i = 0; i < 4; i++) {
-                result += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
-            return result;
-        }
+        import { createKeys } from './path-to-supabase-client.js';
 
         function showError(message) {
             const errorElement = document.getElementById('error');
@@ -147,7 +133,7 @@
             const keys = document.getElementById('keys').value
                 .split('\n')
                 .filter(key => key.trim());
-            
+
             if (keys.length === 0) {
                 showError('Пожалуйста, введите хотя бы один ключ');
                 return;
@@ -158,30 +144,14 @@
             clearError();
 
             try {
-                const results = [];
-                
-                for (const key_value of keys) {
-                    const short_id = generateShortId();
-                    
-                    const { data, error } = await supabase
-                        .from('keys')
-                        .insert([{
-                            short_id,
-                            key_value,
-                            instructions
-                        }])
-                        .select('short_id')
-                        .single();
+                const result = await createKeys(keys, instructions);
 
-                    if (error) {
-                        console.error('Error:', error);
-                        throw error;
-                    }
-                    
-                    results.push(short_id);
+                if (!result || result.error) {
+                    console.error('Error:', result.error);
+                    throw new Error('Произошла ошибка при создании ссылок');
                 }
 
-                const links = results.map(id => `${window.location.origin}/${id}`);
+                const links = result.map(item => `${window.location.origin}/${item.short_id}`);
                 document.getElementById('result').value = links.join('\n');
             } catch (error) {
                 console.error('Error:', error);
