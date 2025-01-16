@@ -1,58 +1,69 @@
-import express from 'express';
-import { nanoid } from 'nanoid';
-import cors from 'cors';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { createClient } from '@supabase/supabase-js'
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const app = express();
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+)
 
-// Хранилище ключей в памяти
-const keysStore = new Map();
-
-app.use(cors());
-app.use(express.json());
-app.use(express.static('public'));
-
-// API для создания новых ключей
-app.post('/api/keys', async (req, res) => {
+// Функция для создания новых ключей
+async function createKeys(keys, instructions) {
   try {
-    const { keys, instructions } = req.body;
     const results = [];
     
     for (const key of keys) {
-      const shortId = nanoid(4); // Генерируем короткий ID из 4 символов
-      keysStore.set(shortId, {
-        key,
-        instructions
-      });
+      const shortId = generateShortId(); // Функция для генерации ID
+      
+      const { data, error } = await supabase
+        .from('keys')
+        .insert([
+          {
+            short_id: shortId,
+            key: key,
+            instructions: instructions
+          }
+        ])
+      
+      if (error) throw error;
       results.push(shortId);
     }
     
-    res.json({ shortIds: results });
+    return { shortIds: results };
   } catch (error) {
-    res.status(500).json({ error: 'Ошибка сервера' });
+    console.error('Error creating keys:', error);
+    throw error;
   }
-});
+}
 
-// API для получения данных ключа
-app.get('/api/keys/:shortId', async (req, res) => {
+// Функция для получения данных ключа
+async function getKeyData(shortId) {
   try {
-    const keyData = keysStore.get(req.params.shortId);
-    if (!keyData) {
-      return res.status(404).json({ error: 'Ключ не найден' });
-    }
-    res.json(keyData);
+    const { data, error } = await supabase
+      .from('keys')
+      .select('*')
+      .eq('short_id', shortId)
+      .single();
+    
+    if (error) throw error;
+    if (!data) throw new Error('Key not found');
+    
+    return {
+      key: data.key,
+      instructions: data.instructions
+    };
   } catch (error) {
-    res.status(500).json({ error: 'Ошибка сервера' });
+    console.error('Error getting key data:', error);
+    throw error;
   }
-});
+}
 
-// Маршрут для коротких ссылок
-app.get('/:shortId', (req, res) => {
-  res.sendFile(join(__dirname, 'public', 'view.html'));
-});
+// Вспомогательная функция для генерации короткого ID
+function generateShortId() {
+  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let result = '';
+  for (let i = 0; i < 4; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
 
-app.listen(3000, () => {
-  console.log('Сервер запущен на порту 3000');
-});
+export { createKeys, getKeyData };
